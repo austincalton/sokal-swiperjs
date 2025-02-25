@@ -1,0 +1,87 @@
+<script src="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.js"></script>
+
+<script>
+  (function(){
+
+    window.Sokal = window.Sokal || {};
+    Sokal.swiperConfig = Sokal.swiperConfig || {};
+    Sokal.swiperConfig['parent'] = '.swiper-parent';
+    Sokal.swiperConfig['swiper'] = '.swiper';
+    Sokal.swiperConfig['baseNav'] = '.swiper-control-slide'
+    Sokal.swiperConfig['nextEl'] = `${Sokal.swiperConfig['baseNav']}-next`;
+    Sokal.swiperConfig['prevEl'] = `${Sokal.swiperConfig['baseNav']}-prev`;
+    
+    const s = {
+      defaults: (swiperId = null) => {
+        return {
+          loop: true,
+          slidesPerView: 3,
+          spaceBetween: 16,
+          allowTouchMove: false,
+          navigation: {
+            nextEl: s.setNavigation('next', swiperId),
+            prevEl: s.setNavigation('prev', swiperId)
+          }
+        }
+      },
+
+      setNavigation: (direction, swiperId) => {
+        let control = Sokal.swiperConfig[`${direction}El`];
+        if (!swiperId) return control;
+
+        return `${control}[data-swiper-id="${swiperId}"]`;
+      },
+
+      getCustoms: (swiper) => {
+        return Object.fromEntries(
+          Object.entries(swiper.dataset).map(([k, v]) => {
+            try {
+              return [k, JSON.parse(v)];
+            } catch {
+              return [k, v];
+            }
+          })
+        );
+      },
+
+      mergeSettings: (target, source) => {
+        for (const key in source) {
+          if ( source[key] && typeof source[key] === "object" && !Array.isArray(source[key])) {
+            if (!target[key] || typeof target[key] !== "object") {
+              target[key] = {};
+            }
+            s.mergeSettings(target[key], source[key]);
+          } else {
+            target[key] = source[key];
+          }
+        }
+
+        return target;
+      },
+
+      init: () => {
+        document.querySelectorAll('.swiper-parent').forEach((parent) => {
+          const swiper = parent.querySelector('.swiper');
+          const nextEl = parent.querySelectorAll('.swiper-control-slide-next');
+          const prevEl = parent.querySelectorAll('.swiper-control-slide-prev');
+          const items = [parent, swiper, ...nextEl, ...prevEl];
+
+          const swiperId = `swiper-${Math.random().toString(36).substr(2, 8)}`;
+
+          items.forEach((item) => {
+            if (item) item.dataset.swiperId = swiperId;
+          });
+
+          const defaults = structuredClone(s.defaults(swiperId));
+          const customs = s.getCustoms(swiper);
+          const config = s.mergeSettings(defaults, customs);
+
+          new Swiper(swiper, config);
+        });
+      }
+    }
+
+    s.init();
+  
+  })()
+</script>
