@@ -32,84 +32,50 @@
         return `${control}[data-swiper-id="${swiperId}"]`;
       },
 
-      getCustoms: (swiper) => {
-        return Object.fromEntries(
-          Object.entries(swiper.dataset).map(([k, v]) => {
-            try {
-              return [k, JSON.parse(v)];
-            } catch {
-              return [k, v];
-            }
-          })
-        );
-      },
-
-      getCustomsWithNesting: function(swiper) {
-
-        // data-breakpoints-320="slidesPerView: 2, spaceBetween: 20"
-        
-        const data = Object.fromEntries(
-          Object.entries(swiper.dataset).map(([k, v]) => {
-            try {
-              return [k, JSON.parse(v)];
-            } catch {
-              return [k, v];
-            }
-          })
-        );
-
-        const result = {};
-
-        for (const [key, value] of Object.entries(data)) {
-          const keys = key.split("-");
-          let current = result;
-
-          while (keys.length > 1) {
-            const prop = s.toCamelCase(keys.shift());
-            if (!current[prop]) current[prop] = {};
-            current = current[prop];
-          }
-
-          current[s.toCamelCase(keys[0])] = value;
-        }
-
-        return result;
-      },
-
-      getCustomsWithNesting2: () => {
+      getCustomsWithNesting: (swiper) => {
         let input = swiper.dataset;
         let output = {};
         let breakpoints = {};
-        
+
         Object.keys(input).forEach((k) => {
-          // key = k
-          // value = input[k]
-
           if (!input[k]) return true;
-          
-          if (k == 'breakpoints') {
-            const breaks = input[k].replace(/\s+/g, "");
-            
-            breaks.split(',').forEach((point) => {
-              breakpoints[point] = {};
-              // To-do:
-                // Grab the value of the related data-point="" (data-320)
-                // Assign it to the breakpoints object
-                // Set some sort of flag to skip over the data-point attributes at the top level of this
-                // See above line - maybe this whole block gets put first before all other properties are processed
-            });
 
+          if (k == 'breakpoints') {
+            const breaks = s.stripWhiteSpace(input[k]);
+
+            breaks.split(',').forEach((point) => {
+              const contents = input[point]
+              if (!contents) return;
+
+              breakpoints[point] = {};
+
+              const settings = s.stripWhiteSpace(contents).split(',');
+
+              settings.forEach((setting) => {
+                const [sName, sValue] = setting.split(':');
+                if (sValue) breakpoints[point][s.toCamelCase(sName)] = sValue;
+              });
+            });
             return true;
           }
-
           output[s.toCamelCase(k)] = input[k];
         });
+
+        Object.keys(breakpoints).forEach((point) => {
+          delete output[point];
+        });
+
+        output['breakpoints'] = breakpoints;
 
         return output;
       },
 
       toCamelCase: function(str) {
         return str.replace(/-([a-z])/g, (_, char) => char.toUpperCase());
+      },
+
+      stripWhiteSpace: function(str) {
+        return str.replace(/\s+/g, "");
       },
 
       mergeSettings: (target, source) => {
@@ -141,14 +107,10 @@
           });
 
           const defaults = structuredClone(s.defaults(swiperId));
-          
-          // const customs = s.getCustoms(swiper);
           const customs = s.getCustomsWithNesting(swiper);
-          console.log(customs);
-          
           const config = s.mergeSettings(defaults, customs);
 
-          // new Swiper(swiper, config);
+          new Swiper(swiper, config);
         });
       }
     }
